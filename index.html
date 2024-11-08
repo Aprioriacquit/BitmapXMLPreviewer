@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitmap Font Previewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+        }
+        form {
+            text-align: center;
+        }
+        #canvas {
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+        #controls {
+            display: none;
+            margin-top: 10px;
+        }
+        #saveXMLButton {
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Bitmap Font Previewer</h1>
+
+<form>
+    <label for="pngFile">Upload PNG file:</label>
+    <input type="file" id="pngFile" accept="image/png"><br><br>
+
+    <label for="xmlFile">Upload XML file:</label>
+    <input type="file" id="xmlFile" accept=".xml"><br><br>
+
+    <button type="button" id="saveXMLButton" onclick="saveXML()">Save Modified XML</button><br><br>
+
+    <label for="inputText">Text to render:</label>
+    <input type="text" id="inputText" value="1234567890.,"><br><br>
+
+    <label for="fontSize">Font Size (Scale):</label>
+    <input type="number" id="fontSize" value="1" step="0.1" min="0.1"><br><br>
+
+    <label for="showEdges">Show Glyph Edges:</label>
+    <input type="checkbox" id="showEdges"><br><br>
+
+    <button type="button" onclick="renderText()">Render Text</button>
+</form>
+
+<canvas id="canvas" width="800" height="200"></canvas>
+
+<div id="controls">
+    <h2>Adjust Glyph Parameters</h2>
+    <label for="xoffset">X Offset:</label>
+    <input type="number" id="xoffset"><br><br>
+
+    <label for="yoffset">Y Offset:</label>
+    <input type="number" id="yoffset"><br><br>
+
+    <label for="xadvance">X Advance:</label>
+    <input type="number" id="xadvance"><br><br>
+
+    <button type="button" onclick="applyChanges()">Apply Changes</button>
+</div>
+
+<script>
+    let image, glyphData = {};
+    let originalXMLStructure = "";
+    let selectedGlyph = null;
+    let fontSize = 1;
+
+    document.getElementById('pngFile').addEventListener('change', loadPNG);
+    document.getElementById('xmlFile').addEventListener('change', loadXML);
+    document.getElementById('canvas').addEventListener('click', handleCanvasClick);
+    document.getElementById('showEdges').addEventListener('change', renderText);
+    document.getElementById('fontSize').addEventListener('input', () => {
+        fontSize = parseFloat(document.getElementById('fontSize').value);
+        renderText();
+    });
+
+    // Load cached files on page load
+    window.addEventListener('load', loadCachedFiles);
+
+    function loadPNG(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                image = new Image();
+                image.src = reader.result;
+                image.onload = () => console.log("Image loaded");
+                localStorage.setItem('cachedPNG', reader.result); // Cache PNG in Local Storage
+            };
+            reader.readAsDataURL(file); // Convert file to Base64
+        }
+    }
+
+    function loadXML(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const xmlText = e.target.result;
+                parseXMLData(xmlText);
+                originalXMLStructure = xmlText; // Store original XML with comments
+                localStorage.setItem('cachedXML', xmlText); // Cache XML in Local Storage
+                document.getElementById('saveXMLButton').style.display = 'inline-block'; // Show Save XML button
+            };
+            reader.readAsText(file);
+        }
+    }
+
+    function loadCachedFiles() {
+        const cachedPNG = localStorage.getItem('cachedPNG');
+        const cachedXML = localStorage.getItem('cachedXML');
+
+        if (cachedPNG) {
+            image = new Image();
+            image.src = cachedPNG;
+            image.onload = renderText;
+        }
+
+        if (cachedXML) {
+            parseXMLData(cachedXML);
+            originalXMLStructure = cachedXML; // Load the original XML structure from cache
+            document.getElementById('saveXMLButton').style.display = 'inline-block'; // Show Save XML button if cached XML exists
+        }
+    }
+
+    function parseXMLData(xmlText) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+
+        xmlDoc.querySelectorAll('char').forEach(charNode => {
+            const charCode = charNode.getAttribute('id');
+            glyphData[charCode] = {
+                x: parseInt(charNode.getAttribute('x')),
+                y: parseInt(charNode.getAttribute('y')),
+                width: parseInt(charNode.getAttribute('width')),
+                height: parseInt(charNode.getAttribute('height')),
+                xoffset: parseInt(charNode.getAttribute('xoffset')),
+                yoffset: parseInt(charNode.getAttribute('yoffset')),
+                xadvance: parseInt(charNode.getAttribute('xadvance')),
+            };
+        });
+        console.log("XML loaded and parsed", glyphData);
+    }
+
+    function renderText() {
+        const text = document.getElementById('inputText').value;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const showEdges = document.getElementById('showEdges').checked;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (image && glyphData) {
+            let x = 0;
+            for (let i = 0; i < text.length; i++) {
+                const charCode = text.charCodeAt(i).toString();
+                const glyph = glyphData[charCode];
+
+                if (glyph) {
+                    ctx.drawImage(
+                        image,
+                        glyph.x, glyph.y, glyph.width, glyph.height,
+                        x + glyph.xoffset * fontSize, glyph.yoffset * fontSize,
+                        glyph.width * fontSize, glyph.height * fontSize
+                    );
+
+                    if (selectedGlyph === charCode) {
+                        ctx.strokeStyle = "blue";
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            x + glyph.xoffset * fontSize, glyph.yoffset * fontSize,
+                            glyph.width * fontSize, glyph.height * fontSize
+                        );
+                    }
+
+                    if (showEdges) {
+                        ctx.strokeStyle = "red";
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(
+                            x,
+                            0,
+                            glyph.xadvance * fontSize,
+                            canvas.height
+                        );
+                    }
+
+                    glyphData[charCode].drawX = x + glyph.xoffset * fontSize;
+                    glyphData[charCode].drawY = glyph.yoffset * fontSize;
+                    glyphData[charCode].drawWidth = glyph.width * fontSize;
+                    glyphData[charCode].drawHeight = glyph.height * fontSize;
+
+                    x += glyph.xadvance * fontSize;
+                } else {
+                    console.warn(`Glyph not found for character: ${text[i]}`);
+                }
+            }
+        } else {
+            alert("Please upload both PNG and XML files");
+        }
+    }
+
+    function handleCanvasClick(event) {
+        const canvas = document.getElementById('canvas');
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        selectedGlyph = null;
+        for (const charCode in glyphData) {
+            const glyph = glyphData[charCode];
+            if (x >= glyph.drawX && x <= glyph.drawX + glyph.drawWidth &&
+                y >= glyph.drawY && y <= glyph.drawY + glyph.drawHeight) {
+                selectedGlyph = charCode;
+                document.getElementById('controls').style.display = 'block';
+                document.getElementById('xoffset').value = glyph.xoffset;
+                document.getElementById('yoffset').value = glyph.yoffset;
+                document.getElementById('xadvance').value = glyph.xadvance;
+                break;
+            }
+        }
+
+        renderText();
+    }
+
+    function applyChanges() {
+        if (selectedGlyph && glyphData[selectedGlyph]) {
+            glyphData[selectedGlyph].xoffset = parseInt(document.getElementById('xoffset').value);
+            glyphData[selectedGlyph].yoffset = parseInt(document.getElementById('yoffset').value);
+            glyphData[selectedGlyph].xadvance = parseInt(document.getElementById('xadvance').value);
+            renderText();
+        }
+    }
+
+    function saveXML() {
+        // Modify only the `char` attributes while preserving comments and structure
+        let modifiedXML = originalXMLStructure.replace(/<char id="(\d+)"[^>]*\/>/g, (match, charCode) => {
+            const glyph = glyphData[charCode];
+            if (glyph) {
+                return `<char id="${charCode}" x="${glyph.x}" y="${glyph.y}" width="${glyph.width}" height="${glyph.height}" xoffset="${glyph.xoffset}" yoffset="${glyph.yoffset}" xadvance="${glyph.xadvance}" />`;
+            }
+            return match; // If no modification, return the original
+        });
+
+        const blob = new Blob([modifiedXML], { type: 'application/xml' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'modified_font.xml';
+        link.click();
+    }
+</script>
+
+</body>
+</html>
