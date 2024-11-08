@@ -1,0 +1,25 @@
+<font>
+	<info face="C:\Users	asya\Desktop\Без-имени-1-export" size="81" />
+	<common lineHeight="81" scaleW="213" scaleH="225" pages="1" />
+	<pages>
+		<page id="0" file="C:\Users	asya\Desktop\Без-имени-1-export.png" />
+	</pages>
+	<chars count="14">
+		<char id="49" x="168" y="150" width="30" height="60" xoffset="0" yoffset="21" xadvance="34" /><!-- 1 -->
+		<char id="50" x="0" y="0" width="44" height="60" xoffset="0" yoffset="21" xadvance="48" /><!-- 2 -->
+		<char id="51" x="0" y="150" width="43" height="60" xoffset="0" yoffset="21" xadvance="47" /><!-- 3 -->
+		<char id="52" x="58" y="75" width="43" height="60" xoffset="0" yoffset="21" xadvance="47" /><!-- 4 -->
+		<char id="53" x="59" y="0" width="42" height="60" xoffset="0" yoffset="21" xadvance="46" /><!-- 5 -->
+		<char id="54" x="116" y="0" width="39" height="60" xoffset="0" yoffset="21" xadvance="43" /><!-- 6 -->
+		<char id="55" x="0" y="75" width="43" height="60" xoffset="0" yoffset="21" xadvance="47" /><!-- 7 -->
+		<char id="56" x="114" y="150" width="39" height="60" xoffset="0" yoffset="21" xadvance="43" /><!-- 8 -->
+		<char id="57" x="116" y="75" width="38" height="60" xoffset="0" yoffset="21" xadvance="42" /><!-- 9 -->
+		<char id="48" x="58" y="150" width="41" height="60" xoffset="0" yoffset="21" xadvance="45" /><!-- 0 -->
+		<char id="46" x="169" y="75" width="15" height="21" xoffset="0" yoffset="60" xadvance="19" /><!-- . -->
+		<char id="44" x="170" y="0" width="15" height="28" xoffset="0" yoffset="60" xadvance="19" /><!-- , -->
+		<char id="32" x="0" y="0" width="0" height="0" xoffset="0" yoffset="0" xadvance="25" /><!--   -->
+		<char id="9" x="0" y="0" width="0" height="0" xoffset="0" yoffset="0" xadvance="200" /><!-- 	 -->
+	</chars>
+	<kernings count="0">
+	</kernings>
+</font>

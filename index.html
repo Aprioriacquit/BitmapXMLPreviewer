@@ -25,10 +25,6 @@
             display: none;
             margin-top: 10px;
         }
-        #saveXMLButton {
-            display: none;
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
@@ -41,8 +37,6 @@
 
     <label for="xmlFile">Upload XML file:</label>
     <input type="file" id="xmlFile" accept=".xml"><br><br>
-
-    <button type="button" id="saveXMLButton" onclick="saveXML()">Save Modified XML</button><br><br>
 
     <label for="inputText">Text to render:</label>
     <input type="text" id="inputText" value="1234567890.,"><br><br>
@@ -60,16 +54,29 @@
 
 <div id="controls">
     <h2>Adjust Glyph Parameters</h2>
+    <label for="x">X:</label>
+    <input type="number" id="x" onchange="updateGlyphParam('x')"><br><br>
+
+    <label for="y">Y:</label>
+    <input type="number" id="y" onchange="updateGlyphParam('y')"><br><br>
+
+    <label for="width">Width:</label>
+    <input type="number" id="width" onchange="updateGlyphParam('width')"><br><br>
+
+    <label for="height">Height:</label>
+    <input type="number" id="height" onchange="updateGlyphParam('height')"><br><br>
+
     <label for="xoffset">X Offset:</label>
-    <input type="number" id="xoffset"><br><br>
+    <input type="number" id="xoffset" onchange="updateGlyphParam('xoffset')"><br><br>
 
     <label for="yoffset">Y Offset:</label>
-    <input type="number" id="yoffset"><br><br>
+    <input type="number" id="yoffset" onchange="updateGlyphParam('yoffset')"><br><br>
 
     <label for="xadvance">X Advance:</label>
-    <input type="number" id="xadvance"><br><br>
+    <input type="number" id="xadvance" onchange="updateXAdvance()"><br><br>
 
-    <button type="button" onclick="applyChanges()">Apply Changes</button>
+    <label for="applyToAll">Apply xAdvance to All:</label>
+    <input type="checkbox" id="applyToAll"><br><br>
 </div>
 
 <script>
@@ -87,8 +94,6 @@
         renderText();
     });
 
-    window.addEventListener('load', loadCachedFiles);
-
     function loadPNG(event) {
         const file = event.target.files[0];
         if (file) {
@@ -96,8 +101,9 @@
             reader.onload = () => {
                 image = new Image();
                 image.src = reader.result;
-                image.onload = () => console.log("Image loaded");
-                localStorage.setItem('cachedPNG', reader.result);
+                image.onload = () => {
+                    renderText(); // Render text once the image is loaded
+                };
             };
             reader.readAsDataURL(file);
         }
@@ -111,27 +117,8 @@
                 const xmlText = e.target.result;
                 parseXMLData(xmlText);
                 originalXMLStructure = xmlText;
-                localStorage.setItem('cachedXML', xmlText);
-                document.getElementById('saveXMLButton').style.display = 'inline-block';
             };
             reader.readAsText(file);
-        }
-    }
-
-    function loadCachedFiles() {
-        const cachedPNG = localStorage.getItem('cachedPNG');
-        const cachedXML = localStorage.getItem('cachedXML');
-
-        if (cachedPNG) {
-            image = new Image();
-            image.src = cachedPNG;
-            image.onload = renderText;
-        }
-
-        if (cachedXML) {
-            parseXMLData(cachedXML);
-            originalXMLStructure = cachedXML;
-            document.getElementById('saveXMLButton').style.display = 'inline-block';
         }
     }
 
@@ -151,7 +138,6 @@
                 xadvance: parseInt(charNode.getAttribute('xadvance')),
             };
         });
-        console.log("XML loaded and parsed", glyphData);
     }
 
     function renderText() {
@@ -163,51 +149,54 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (image && glyphData) {
-            let x = 0;
+            let x = 30;
             for (let i = 0; i < text.length; i++) {
                 const charCode = text.charCodeAt(i).toString();
                 const glyph = glyphData[charCode];
 
                 if (glyph) {
+                    // Draw glyph on top of PNG
                     ctx.drawImage(
                         image,
                         glyph.x, glyph.y, glyph.width, glyph.height,
-                        x + glyph.xoffset * fontSize, glyph.yoffset * fontSize,
-                        glyph.width * fontSize, glyph.height * fontSize
+                        x + glyph.xoffset * fontSize,
+                        30 + glyph.yoffset * fontSize,
+                        glyph.width * fontSize,
+                        glyph.height * fontSize
                     );
 
+                    // Highlight selected glyph
                     if (selectedGlyph === charCode) {
                         ctx.strokeStyle = "blue";
                         ctx.lineWidth = 2;
                         ctx.strokeRect(
-                            x + glyph.xoffset * fontSize, glyph.yoffset * fontSize,
-                            glyph.width * fontSize, glyph.height * fontSize
+                            x + glyph.xoffset * fontSize,
+                            30 + glyph.yoffset * fontSize,
+                            glyph.width * fontSize,
+                            glyph.height * fontSize
                         );
                     }
 
+                    // Show glyph edges if checkbox is selected
                     if (showEdges) {
                         ctx.strokeStyle = "red";
                         ctx.lineWidth = 1;
                         ctx.strokeRect(
                             x,
-                            0,
+                            30,
                             glyph.xadvance * fontSize,
-                            canvas.height
+                            canvas.height - 60
                         );
                     }
 
-                    glyphData[charCode].drawX = x + glyph.xoffset * fontSize;
-                    glyphData[charCode].drawY = glyph.yoffset * fontSize;
-                    glyphData[charCode].drawWidth = glyph.width * fontSize;
-                    glyphData[charCode].drawHeight = glyph.height * fontSize;
+                    glyph.drawX = x + glyph.xoffset * fontSize;
+                    glyph.drawY = 30 + glyph.yoffset * fontSize;
+                    glyph.drawWidth = glyph.width * fontSize;
+                    glyph.drawHeight = glyph.height * fontSize;
 
                     x += glyph.xadvance * fontSize;
-                } else {
-                    console.warn(`Glyph not found for character: ${text[i]}`);
                 }
             }
-        } else {
-            alert("Please upload both PNG and XML files");
         }
     }
 
@@ -224,39 +213,43 @@
                 y >= glyph.drawY && y <= glyph.drawY + glyph.drawHeight) {
                 selectedGlyph = charCode;
                 document.getElementById('controls').style.display = 'block';
+                document.getElementById('x').value = glyph.x;
+                document.getElementById('y').value = glyph.y;
+                document.getElementById('width').value = glyph.width;
+                document.getElementById('height').value = glyph.height;
                 document.getElementById('xoffset').value = glyph.xoffset;
                 document.getElementById('yoffset').value = glyph.yoffset;
                 document.getElementById('xadvance').value = glyph.xadvance;
                 break;
             }
         }
-
         renderText();
     }
 
-    function applyChanges() {
+    function updateGlyphParam(param) {
         if (selectedGlyph && glyphData[selectedGlyph]) {
-            glyphData[selectedGlyph].xoffset = parseInt(document.getElementById('xoffset').value);
-            glyphData[selectedGlyph].yoffset = parseInt(document.getElementById('yoffset').value);
-            glyphData[selectedGlyph].xadvance = parseInt(document.getElementById('xadvance').value);
+            glyphData[selectedGlyph][param] = parseInt(document.getElementById(param).value);
             renderText();
         }
     }
 
-    function saveXML() {
-        let modifiedXML = originalXMLStructure.replace(/<char id="(\d+)"[^>]*\/>/g, (match, charCode) => {
-            const glyph = glyphData[charCode];
-            if (glyph) {
-                return `<char id="${charCode}" x="${glyph.x}" y="${glyph.y}" width="${glyph.width}" height="${glyph.height}" xoffset="${glyph.xoffset}" yoffset="${glyph.yoffset}" xadvance="${glyph.xadvance}" />`;
-            }
-            return match;
-        });
+    function updateXAdvance() {
+        const xadvanceValue = parseInt(document.getElementById("xadvance").value);
+        const applyToAll = document.getElementById("applyToAll").checked;
 
-        const blob = new Blob([modifiedXML], { type: 'application/xml' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'modified_font.xml';
-        link.click();
+        if (applyToAll) {
+            const text = document.getElementById("inputText").value;
+            text.split("").forEach(char => {
+                const charCode = char.charCodeAt(0).toString();
+                if (glyphData[charCode]) {
+                    glyphData[charCode].xadvance = xadvanceValue;
+                }
+            });
+        } else if (selectedGlyph && glyphData[selectedGlyph]) {
+            glyphData[selectedGlyph].xadvance = xadvanceValue;
+        }
+
+        renderText();
     }
 </script>
 
