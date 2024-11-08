@@ -28,6 +28,27 @@
         #controls, #animation-controls {
             margin-top: 10px;
         }
+        #smallPreviewContainer {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 150px;
+            height: auto;
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background: #fff;
+        }
+        #smallPreviewImage {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #highlight-box {
+            position: absolute;
+            border: 2px solid blue;
+            background: rgba(0, 0, 255, 0.2);
+            display: none;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -52,6 +73,12 @@
 
     <button type="button" onclick="renderText()">Render Text</button>
 </form>
+
+<!-- Small Preview for PNG with Highlight -->
+<div id="smallPreviewContainer">
+    <img id="smallPreviewImage" src="" alt="PNG Preview">
+    <div id="highlight-box"></div>
+</div>
 
 <div id="preview-container">
     <canvas id="canvas" width="800" height="200"></canvas>
@@ -108,6 +135,7 @@
     let selectedGlyph = null;
     let fontSize = 1;
     let animationInterval;
+    let imageScaleX = 1, imageScaleY = 1; // Track scaling factors for highlight positioning
 
     document.getElementById('pngFile').addEventListener('change', loadPNG);
     document.getElementById('xmlFile').addEventListener('change', loadXML);
@@ -126,7 +154,13 @@
                 image = new Image();
                 image.src = reader.result;
                 image.onload = () => {
-                    renderText(); // Render text once the image is loaded
+                    const previewImage = document.getElementById('smallPreviewImage');
+                    previewImage.src = image.src;
+                    previewImage.onload = () => {
+                        imageScaleX = previewImage.width / image.width;
+                        imageScaleY = previewImage.height / image.height;
+                        renderText(); // Render text once the image is loaded
+                    };
                 };
             };
             reader.readAsDataURL(file);
@@ -239,80 +273,27 @@
                 document.getElementById('xoffset').value = glyph.xoffset;
                 document.getElementById('yoffset').value = glyph.yoffset;
                 document.getElementById('xadvance').value = glyph.xadvance;
+
+                updatePreviewHighlight(glyph);
                 break;
             }
         }
         renderText();
     }
 
+    function updatePreviewHighlight(glyph) {
+        const highlightBox = document.getElementById('highlight-box');
+        highlightBox.style.display = 'block';
+        highlightBox.style.left = `${glyph.x * imageScaleX}px`;
+        highlightBox.style.top = `${glyph.y * imageScaleY}px`;
+        highlightBox.style.width = `${glyph.width * imageScaleX}px`;
+        highlightBox.style.height = `${glyph.height * imageScaleY}px`;
+    }
+
     function updateGlyphParam(param) {
         if (selectedGlyph && glyphData[selectedGlyph]) {
             glyphData[selectedGlyph][param] = parseInt(document.getElementById(param).value);
             renderText();
-        }
-    }
-
-    function updateXAdvance() {
-        const xadvanceValue = parseInt(document.getElementById("xadvance").value);
-        const applyToAll = document.getElementById("applyToAll").checked;
-
-        if (applyToAll) {
-            const text = document.getElementById("inputText").value;
-            text.split("").forEach(char => {
-                const charCode = char.charCodeAt(0).toString();
-                if (glyphData[charCode]) {
-                    glyphData[charCode].xadvance = xadvanceValue;
-                }
-            });
-        } else if (selectedGlyph && glyphData[selectedGlyph]) {
-            glyphData[selectedGlyph].xadvance = xadvanceValue;
-        }
-
-        renderText();
-    }
-
-    function startCounterAnimation() {
-        if (animationInterval) clearInterval(animationInterval);
-
-        const from = parseInt(document.getElementById('from').value);
-        const to = parseInt(document.getElementById('to').value);
-        const speed = parseInt(document.getElementById('speed').value);
-        const incr = parseInt(document.getElementById('increment').value);
-
-        let counter = from;
-        const increment = from < to ? incr : -incr;
-
-        const counterCanvas = document.getElementById('counterCanvas');
-        const ctx = counterCanvas.getContext('2d');
-
-        animationInterval = setInterval(() => {
-            ctx.clearRect(0, 0, counterCanvas.width, counterCanvas.height);
-            renderCounter(counter.toString(), ctx, counterCanvas.width / 2);
-
-            if (counter === to) {
-                clearInterval(animationInterval);
-            }
-            counter += increment;
-        }, speed);
-    }
-
-    function renderCounter(text, ctx, xStart) {
-        let x = xStart - (text.length * 20); // Adjust for centering
-        for (let i = 0; i < text.length; i++) {
-            const charCode = text.charCodeAt(i).toString();
-            const glyph = glyphData[charCode];
-
-            if (glyph && image) {
-                ctx.drawImage(
-                    image,
-                    glyph.x, glyph.y, glyph.width, glyph.height,
-                    x + glyph.xoffset * fontSize,
-                    10 + glyph.yoffset * fontSize,
-                    glyph.width * fontSize,
-                    glyph.height * fontSize
-                );
-                x += glyph.xadvance * fontSize;
-            }
         }
     }
 </script>
