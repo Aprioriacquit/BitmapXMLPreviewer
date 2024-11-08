@@ -11,9 +11,20 @@
             flex-direction: column;
             align-items: center;
             margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1 {
+            margin-bottom: 10px;
         }
         form {
             text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
         #preview-container {
             display: flex;
@@ -24,9 +35,16 @@
         }
         #canvas, #counterCanvas {
             border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
         #controls, #animation-controls {
             margin-top: 10px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
         #smallPreviewContainer {
             position: fixed;
@@ -37,10 +55,14 @@
             overflow: hidden;
             border: 1px solid #ccc;
             background: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            padding: 5px;
         }
         #smallPreviewImage {
             max-width: 100%;
             max-height: 100%;
+            display: block;
         }
         #highlight-box {
             position: absolute;
@@ -49,11 +71,35 @@
             display: none;
             pointer-events: none;
         }
+        .top-right-buttons {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .top-right-buttons button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .top-right-buttons button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
 
 <h1>Bitmap Font Previewer</h1>
+
+<div class="top-right-buttons">
+    <button onclick="resetAll()">Reset</button>
+    <button onclick="saveXML()">Save XML</button>
+</div>
 
 <form>
     <label for="pngFile">Upload PNG file:</label>
@@ -135,7 +181,7 @@
     let selectedGlyph = null;
     let fontSize = 1;
     let animationInterval;
-    let imageScaleX = 1, imageScaleY = 1; // Track scaling factors for highlight positioning
+    let imageScaleX = 1, imageScaleY = 1;
 
     document.getElementById('pngFile').addEventListener('change', loadPNG);
     document.getElementById('xmlFile').addEventListener('change', loadXML);
@@ -159,7 +205,8 @@
                     previewImage.onload = () => {
                         imageScaleX = previewImage.width / image.width;
                         imageScaleY = previewImage.height / image.height;
-                        renderText(); // Render text once the image is loaded
+                        localStorage.setItem('cachedPNG', reader.result);
+                        renderText();
                     };
                 };
             };
@@ -173,6 +220,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 parseXMLData(e.target.result);
+                localStorage.setItem('cachedXML', e.target.result);
             };
             reader.readAsText(file);
         }
@@ -296,6 +344,48 @@
             renderText();
         }
     }
+
+    function saveXML() {
+        const modifiedXML = localStorage.getItem('cachedXML').replace(/<char id="(\d+)"[^>]*\/>/g, (match, charCode) => {
+            const glyph = glyphData[charCode];
+            if (glyph) {
+                return `<char id="${charCode}" x="${glyph.x}" y="${glyph.y}" width="${glyph.width}" height="${glyph.height}" xoffset="${glyph.xoffset}" yoffset="${glyph.yoffset}" xadvance="${glyph.xadvance}" />`;
+            }
+            return match;
+        });
+
+        const blob = new Blob([modifiedXML], { type: 'application/xml' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'modified_font.xml';
+        link.click();
+    }
+
+    function resetAll() {
+        localStorage.clear();
+        location.reload();
+    }
+
+    window.onload = () => {
+        const cachedPNG = localStorage.getItem('cachedPNG');
+        const cachedXML = localStorage.getItem('cachedXML');
+
+        if (cachedPNG) {
+            const previewImage = document.getElementById('smallPreviewImage');
+            previewImage.src = cachedPNG;
+            image = new Image();
+            image.src = cachedPNG;
+            image.onload = () => {
+                imageScaleX = previewImage.width / image.width;
+                imageScaleY = previewImage.height / image.height;
+                renderText();
+            };
+        }
+
+        if (cachedXML) {
+            parseXMLData(cachedXML);
+        }
+    };
 </script>
 
 </body>
