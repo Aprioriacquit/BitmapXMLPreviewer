@@ -87,7 +87,6 @@
         renderText();
     });
 
-    // Load cached files on page load
     window.addEventListener('load', loadCachedFiles);
 
     function loadPNG(event) {
@@ -98,9 +97,9 @@
                 image = new Image();
                 image.src = reader.result;
                 image.onload = () => console.log("Image loaded");
-                localStorage.setItem('cachedPNG', reader.result); // Cache PNG in Local Storage
+                localStorage.setItem('cachedPNG', reader.result);
             };
-            reader.readAsDataURL(file); // Convert file to Base64
+            reader.readAsDataURL(file);
         }
     }
 
@@ -111,9 +110,9 @@
             reader.onload = (e) => {
                 const xmlText = e.target.result;
                 parseXMLData(xmlText);
-                originalXMLStructure = xmlText; // Store original XML with comments
-                localStorage.setItem('cachedXML', xmlText); // Cache XML in Local Storage
-                document.getElementById('saveXMLButton').style.display = 'inline-block'; // Show Save XML button
+                originalXMLStructure = xmlText;
+                localStorage.setItem('cachedXML', xmlText);
+                document.getElementById('saveXMLButton').style.display = 'inline-block';
             };
             reader.readAsText(file);
         }
@@ -131,8 +130,8 @@
 
         if (cachedXML) {
             parseXMLData(cachedXML);
-            originalXMLStructure = cachedXML; // Load the original XML structure from cache
-            document.getElementById('saveXMLButton').style.display = 'inline-block'; // Show Save XML button if cached XML exists
+            originalXMLStructure = cachedXML;
+            document.getElementById('saveXMLButton').style.display = 'inline-block';
         }
     }
 
@@ -245,13 +244,12 @@
     }
 
     function saveXML() {
-        // Modify only the `char` attributes while preserving comments and structure
         let modifiedXML = originalXMLStructure.replace(/<char id="(\d+)"[^>]*\/>/g, (match, charCode) => {
             const glyph = glyphData[charCode];
             if (glyph) {
                 return `<char id="${charCode}" x="${glyph.x}" y="${glyph.y}" width="${glyph.width}" height="${glyph.height}" xoffset="${glyph.xoffset}" yoffset="${glyph.yoffset}" xadvance="${glyph.xadvance}" />`;
             }
-            return match; // If no modification, return the original
+            return match;
         });
 
         const blob = new Blob([modifiedXML], { type: 'application/xml' });
