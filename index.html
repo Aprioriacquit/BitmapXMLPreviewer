@@ -8,21 +8,24 @@
         body {
             font-family: Arial, sans-serif;
             display: flex;
-            justify-content: center;
-            align-items: center;
             flex-direction: column;
-            height: 100vh;
+            align-items: center;
             margin: 0;
         }
         form {
             text-align: center;
         }
-        #canvas {
-            border: 1px solid #ccc;
+        #preview-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 40px;
             margin-top: 20px;
         }
-        #controls {
-            display: none;
+        #canvas, #counterCanvas {
+            border: 1px solid #ccc;
+        }
+        #controls, #animation-controls {
             margin-top: 10px;
         }
     </style>
@@ -50,7 +53,28 @@
     <button type="button" onclick="renderText()">Render Text</button>
 </form>
 
-<canvas id="canvas" width="800" height="200"></canvas>
+<div id="preview-container">
+    <canvas id="canvas" width="800" height="200"></canvas>
+
+    <div id="animation-controls">
+        <h2>Counter Animation</h2>
+        <label for="from">From:</label>
+        <input type="number" id="from" value="0"><br><br>
+
+        <label for="to">To:</label>
+        <input type="number" id="to" value="205632"><br><br>
+
+        <label for="speed">Speed (ms):</label>
+        <input type="number" id="speed" value="20"><br><br>
+
+        <label for="increment">Increment:</label>
+        <input type="number" id="increment" value="4"><br><br>
+
+        <button type="button" onclick="startCounterAnimation()">Start</button>
+    </div>
+</div>
+
+<canvas id="counterCanvas" width="400" height="100"></canvas>
 
 <div id="controls">
     <h2>Adjust Glyph Parameters</h2>
@@ -81,9 +105,9 @@
 
 <script>
     let image, glyphData = {};
-    let originalXMLStructure = "";
     let selectedGlyph = null;
     let fontSize = 1;
+    let animationInterval;
 
     document.getElementById('pngFile').addEventListener('change', loadPNG);
     document.getElementById('xmlFile').addEventListener('change', loadXML);
@@ -114,9 +138,7 @@
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const xmlText = e.target.result;
-                parseXMLData(xmlText);
-                originalXMLStructure = xmlText;
+                parseXMLData(e.target.result);
             };
             reader.readAsText(file);
         }
@@ -155,7 +177,6 @@
                 const glyph = glyphData[charCode];
 
                 if (glyph) {
-                    // Draw glyph on top of PNG
                     ctx.drawImage(
                         image,
                         glyph.x, glyph.y, glyph.width, glyph.height,
@@ -165,7 +186,6 @@
                         glyph.height * fontSize
                     );
 
-                    // Highlight selected glyph
                     if (selectedGlyph === charCode) {
                         ctx.strokeStyle = "blue";
                         ctx.lineWidth = 2;
@@ -177,7 +197,6 @@
                         );
                     }
 
-                    // Show glyph edges if checkbox is selected
                     if (showEdges) {
                         ctx.strokeStyle = "red";
                         ctx.lineWidth = 1;
@@ -250,6 +269,51 @@
         }
 
         renderText();
+    }
+
+    function startCounterAnimation() {
+        if (animationInterval) clearInterval(animationInterval);
+
+        const from = parseInt(document.getElementById('from').value);
+        const to = parseInt(document.getElementById('to').value);
+        const speed = parseInt(document.getElementById('speed').value);
+        const incr = parseInt(document.getElementById('increment').value);
+
+        let counter = from;
+        const increment = from < to ? incr : -incr;
+
+        const counterCanvas = document.getElementById('counterCanvas');
+        const ctx = counterCanvas.getContext('2d');
+
+        animationInterval = setInterval(() => {
+            ctx.clearRect(0, 0, counterCanvas.width, counterCanvas.height);
+            renderCounter(counter.toString(), ctx, counterCanvas.width / 2);
+
+            if (counter === to) {
+                clearInterval(animationInterval);
+            }
+            counter += increment;
+        }, speed);
+    }
+
+    function renderCounter(text, ctx, xStart) {
+        let x = xStart - (text.length * 20); // Adjust for centering
+        for (let i = 0; i < text.length; i++) {
+            const charCode = text.charCodeAt(i).toString();
+            const glyph = glyphData[charCode];
+
+            if (glyph && image) {
+                ctx.drawImage(
+                    image,
+                    glyph.x, glyph.y, glyph.width, glyph.height,
+                    x + glyph.xoffset * fontSize,
+                    10 + glyph.yoffset * fontSize,
+                    glyph.width * fontSize,
+                    glyph.height * fontSize
+                );
+                x += glyph.xadvance * fontSize;
+            }
+        }
     }
 </script>
 
